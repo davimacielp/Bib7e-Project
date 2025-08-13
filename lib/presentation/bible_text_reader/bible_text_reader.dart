@@ -1,58 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sizer/sizer.dart';
-import 'dart:convert';
+import 'package:scripture_study/services/local_chapter_loader.dart';
+import 'package:scripture_study/i18n/books.dart';
 
-// Typography constants
-const TITLE_FONT =
-    "'Merriweather','Noto Serif','Georgia','Times New Roman',serif";
-const BODY_FONT =
-    "'Inter','SF Pro Text','Roboto','Segoe UI',system-ui,sans-serif";
-const ORIGINAL_FONT =
-    "'Noto Serif','Merriweather','Georgia','Times New Roman',serif";
+const DEBUG_HUD =
+    bool.fromEnvironment('BIB7E_DEBUG', defaultValue: false) || false;
 
-// Mock data for immediate display
-const Map<String, dynamic> MOCK_JOAO_1 = {
-  "book_slug": "joao",
-  "chapter": 1,
-  "rtl_original": false,
-  "verses": [
-    {
-      "n": 1,
-      "original": "Ἐν ἀρχῇ ἦν ὁ Λόγος",
-      "translit": "En archē ēn ho Lógos",
-      "pt": "No princípio era o Logos"
-    },
-    {
-      "n": 2,
-      "original": "οὗτος ἦν ἐν ἀρχῇ πρὸς τὸν Θεόν",
-      "translit": "houtos ēn en archē pros ton Theón",
-      "pt": "Ele estava no princípio com Deus"
-    },
-    {
-      "n": 3,
-      "original": "πάντα δι' αὐτοῦ ἐγένετο",
-      "translit": "panta di' autou egeneto",
-      "pt": "Todas as coisas foram feitas por meio dele"
-    },
-    {
-      "n": 4,
-      "original": "ἐν αὐτῷ ζωὴ ἦν",
-      "translit": "en autō zōē ēn",
-      "pt": "Nele estava a vida"
-    },
-    {
-      "n": 5,
-      "original": "καὶ ἡ σκοτία αὐτὸ οὐ κατέλαβεν",
-      "translit": "kai hē skotia auto ou katelaben",
-      "pt": "e as trevas não a venceram"
-    }
-  ]
-};
+const FORCE_MOCK = false; // desativado por padrão
 
-const FORCE_MOCK = true;
-const DEBUG_HUD = true;
+final titleFont = GoogleFonts.merriweather(); // fallback interno do package
+final bodyFont = GoogleFonts.inter();
+final originalFont = GoogleFonts.notoSerif();
 
 class BibleTextReader extends StatefulWidget {
   const BibleTextReader({Key? key}) : super(key: key);
@@ -69,7 +28,8 @@ class _BibleTextReaderState extends State<BibleTextReader> {
   @override
   void initState() {
     super.initState();
-    _loaderResult = useChapterLoader(_bookSlug, _chapter);
+    _loaderResult =
+        useChapterLoader(_bookSlug, _chapter, forceMock: FORCE_MOCK);
   }
 
   @override
@@ -85,7 +45,8 @@ class _BibleTextReaderState extends State<BibleTextReader> {
         setState(() {
           _bookSlug = newBookSlug;
           _chapter = newChapter;
-          _loaderResult = useChapterLoader(_bookSlug, _chapter);
+          _loaderResult =
+              useChapterLoader(_bookSlug, _chapter, forceMock: FORCE_MOCK);
         });
       }
     }
@@ -106,7 +67,8 @@ class _BibleTextReaderState extends State<BibleTextReader> {
 
   void _retry() {
     setState(() {
-      _loaderResult = useChapterLoader(_bookSlug, _chapter);
+      _loaderResult =
+          useChapterLoader(_bookSlug, _chapter, forceMock: FORCE_MOCK);
     });
   }
 
@@ -632,334 +594,3 @@ class ReaderFooter extends StatelessWidget {
   }
 }
 
-class ChapterLoaderState {
-  bool loading;
-  bool error;
-  Map<String, dynamic>? data;
-
-  ChapterLoaderState({
-    this.loading = true,
-    this.error = false,
-    this.data,
-  });
-}
-
-class ChapterLoaderResult {
-  final ChapterLoaderState state;
-  final Function() retry;
-  final String bookSlug;
-  final int chapter;
-
-  ChapterLoaderResult({
-    required this.state,
-    required this.retry,
-    required this.bookSlug,
-    required this.chapter,
-  });
-}
-
-Future<String?> safeFetchMulti(String bookSlug, int chapter) async {
-  final candidates = [
-    '/assets/bible/$bookSlug/$chapter.json',
-    './assets/bible/$bookSlug/$chapter.json',
-    'assets/bible/$bookSlug/$chapter.json'
-  ];
-
-  for (final candidate in candidates) {
-    try {
-      final jsonString = await rootBundle.loadString(candidate);
-      if (jsonString.isNotEmpty) return jsonString;
-    } catch (_) {}
-  }
-  return null;
-}
-
-ChapterLoaderResult useChapterLoader(String bookSlugParam, int chapterParam) {
-  final bookSlug = (bookSlugParam.isNotEmpty) ? bookSlugParam : "joao";
-  final chapterNum = chapterParam > 0 ? chapterParam : 1;
-
-  final state = ChapterLoaderState();
-
-  Future<void> load() async {
-    if (FORCE_MOCK) {
-      state.loading = false;
-      state.error = false;
-      state.data = MOCK_JOAO_1;
-      return;
-    }
-
-    state.loading = true;
-    state.error = false;
-    state.data = null;
-
-    final jsonString = await safeFetchMulti(bookSlug, chapterNum);
-    Map<String, dynamic>? json;
-    try {
-      json = jsonString != null ? jsonDecode(jsonString) : null;
-    } catch (_) {
-      json = null;
-    }
-
-    if (json != null &&
-        json['verses'] != null &&
-        json['verses'] is List &&
-        (json['verses'] as List).isNotEmpty) {
-      state.data = json;
-      state.loading = false;
-      state.error = false;
-      return;
-    }
-
-    if (bookSlug == "joao" && chapterNum == 1) {
-      state.data = MOCK_JOAO_1;
-      state.loading = false;
-      state.error = false;
-      return;
-    }
-
-    state.loading = false;
-    state.error = true;
-    state.data = null;
-  }
-
-  void retry() {
-    load();
-  }
-
-  load();
-
-  return ChapterLoaderResult(
-    state: state,
-    retry: retry,
-    bookSlug: bookSlug,
-    chapter: chapterNum,
-  );
-}
-
-const List<String> BOOKS_CANON = [
-  "genesis",
-  "exodo",
-  "levitico",
-  "numeros",
-  "deuteronomio",
-  "josue",
-  "juizes",
-  "rute",
-  "1samuel",
-  "2samuel",
-  "1reis",
-  "2reis",
-  "1cronicas",
-  "2cronicas",
-  "esdras",
-  "neemias",
-  "ester",
-  "jo",
-  "salmos",
-  "proverbios",
-  "eclesiastes",
-  "cantares",
-  "isaias",
-  "jeremias",
-  "lamentacoes",
-  "ezequiel",
-  "daniel",
-  "oseias",
-  "joel",
-  "amos",
-  "obadias",
-  "jonas",
-  "miqueias",
-  "naum",
-  "habacuque",
-  "sofonias",
-  "ageu",
-  "zacarias",
-  "malaquias",
-  "mateus",
-  "marcos",
-  "lucas",
-  "joao",
-  "atos",
-  "romanos",
-  "1corintios",
-  "2corintios",
-  "galatas",
-  "efesios",
-  "filipenses",
-  "colossenses",
-  "1tessalonicenses",
-  "2tessalonicenses",
-  "1timoteo",
-  "2timoteo",
-  "tito",
-  "filemom",
-  "hebreus",
-  "tiago",
-  "1pedro",
-  "2pedro",
-  "1joao",
-  "2joao",
-  "3joao",
-  "judas",
-  "apocalipse"
-];
-
-const Map<String, String> NAMES_PT = {
-  "genesis": "Gênesis",
-  "exodo": "Êxodo",
-  "levitico": "Levítico",
-  "numeros": "Números",
-  "deuteronomio": "Deuteronômio",
-  "josue": "Josué",
-  "juizes": "Juízes",
-  "rute": "Rute",
-  "1samuel": "1 Samuel",
-  "2samuel": "2 Samuel",
-  "1reis": "1 Reis",
-  "2reis": "2 Reis",
-  "1cronicas": "1 Crônicas",
-  "2cronicas": "2 Crônicas",
-  "esdras": "Esdras",
-  "neemias": "Neemias",
-  "ester": "Ester",
-  "jo": "Jó",
-  "salmos": "Salmos",
-  "proverbios": "Provérbios",
-  "eclesiastes": "Eclesiastes",
-  "cantares": "Cânticos",
-  "isaias": "Isaías",
-  "jeremias": "Jeremias",
-  "lamentacoes": "Lamentações",
-  "ezequiel": "Ezequiel",
-  "daniel": "Daniel",
-  "oseias": "Oséias",
-  "joel": "Joel",
-  "amos": "Amós",
-  "obadias": "Obadias",
-  "jonas": "Jonas",
-  "miqueias": "Miquéias",
-  "naum": "Naum",
-  "habacuque": "Habacuque",
-  "sofonias": "Sofonias",
-  "ageu": "Ageu",
-  "zacarias": "Zacarias",
-  "malaquias": "Malaquias",
-  "mateus": "Mateus",
-  "marcos": "Marcos",
-  "lucas": "Lucas",
-  "joao": "João",
-  "atos": "Atos",
-  "romanos": "Romanos",
-  "1corintios": "1 Coríntios",
-  "2corintios": "2 Coríntios",
-  "galatas": "Gálatas",
-  "efesios": "Efésios",
-  "filipenses": "Filipenses",
-  "colossenses": "Colossenses",
-  "1tessalonicenses": "1 Tessalonicenses",
-  "2tessalonicenses": "2 Tessalonicenses",
-  "1timoteo": "1 Timóteo",
-  "2timoteo": "2 Timóteo",
-  "tito": "Tito",
-  "filemom": "Filemom",
-  "hebreus": "Hebreus",
-  "tiago": "Tiago",
-  "1pedro": "1 Pedro",
-  "2pedro": "2 Pedro",
-  "1joao": "1 João",
-  "2joao": "2 João",
-  "3joao": "3 João",
-  "judas": "Judas",
-  "apocalipse": "Apocalipse"
-};
-
-const Map<String, String> NAMES_EN = {
-  "genesis": "Genesis",
-  "exodo": "Exodus",
-  "levitico": "Leviticus",
-  "numeros": "Numbers",
-  "deuteronomio": "Deuteronomy",
-  "josue": "Joshua",
-  "juizes": "Judges",
-  "rute": "Ruth",
-  "1samuel": "1 Samuel",
-  "2samuel": "2 Samuel",
-  "1reis": "1 Kings",
-  "2reis": "2 Kings",
-  "1cronicas": "1 Chronicles",
-  "2cronicas": "2 Chronicles",
-  "esdras": "Ezra",
-  "neemias": "Nehemiah",
-  "ester": "Esther",
-  "jo": "Job",
-  "salmos": "Psalms",
-  "proverbios": "Proverbs",
-  "eclesiastes": "Ecclesiastes",
-  "cantares": "Song of Songs",
-  "isaias": "Isaiah",
-  "jeremias": "Jeremiah",
-  "lamentacoes": "Lamentations",
-  "ezequiel": "Ezekiel",
-  "daniel": "Daniel",
-  "oseias": "Hosea",
-  "joel": "Joel",
-  "amos": "Amos",
-  "obadias": "Obadiah",
-  "jonas": "Jonah",
-  "miqueias": "Micah",
-  "naum": "Nahum",
-  "habacuque": "Habakkuk",
-  "sofonias": "Zephaniah",
-  "ageu": "Haggai",
-  "zacarias": "Zechariah",
-  "malaquias": "Malachi",
-  "mateus": "Matthew",
-  "marcos": "Mark",
-  "lucas": "Luke",
-  "joao": "John",
-  "atos": "Acts",
-  "romanos": "Romans",
-  "1corintios": "1 Corinthians",
-  "2corintios": "2 Corinthians",
-  "galatas": "Galatians",
-  "efesios": "Ephesians",
-  "filipenses": "Philippians",
-  "colossenses": "Colossians",
-  "1tessalonicenses": "1 Thessalonians",
-  "2tessalonicenses": "2 Thessalonians",
-  "1timoteo": "1 Timothy",
-  "2timoteo": "2 Timothy",
-  "tito": "Titus",
-  "filemom": "Philemon",
-  "hebreus": "Hebrews",
-  "tiago": "James",
-  "1pedro": "1 Peter",
-  "2pedro": "2 Peter",
-  "1joao": "1 John",
-  "2joao": "2 John",
-  "3joao": "3 John",
-  "judas": "Jude",
-  "apocalipse": "Revelation"
-};
-
-String mapSlugToName(String slug, [String lang = "pt"]) {
-  final s = (slug).toLowerCase();
-  const dictionaries = {"pt": NAMES_PT, "en": NAMES_EN};
-  final dict = dictionaries[lang] ?? NAMES_PT;
-
-  final fromDict = dict[s];
-  if (fromDict != null) return fromDict;
-
-  if (lang != "pt" && NAMES_PT[s] != null) return NAMES_PT[s]!;
-
-  return s
-      .replaceAllMapped(RegExp(r'(\d)([a-z])'),
-          (match) => '${match.group(1)} ${match.group(2)}')
-      .replaceAll('-', ' ')
-      .split(' ')
-      .map((word) => word.isNotEmpty
-          ? '${word[0].toUpperCase()}${word.substring(1)}'
-          : word)
-      .join(' ');
-}
