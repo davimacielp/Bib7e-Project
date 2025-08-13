@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sizer/sizer.dart';
 
+import '../../books.dart';
+
 class ChapterListScreen extends StatefulWidget {
   const ChapterListScreen({Key? key}) : super(key: key);
 
@@ -132,38 +134,15 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
   }
 
   void _navigateToReader(String bookId, int chapterNumber) {
-    // Map book IDs to appropriate book slugs for asset paths
-    String bookSlug = _getBookSlug(bookId);
+    final slug = _getBookSlug(bookId);
 
-    Navigator.pushNamed(
-      context,
+    Navigator.of(context).pushNamed(
       '/bible-text-reader',
-      arguments: {
-        'book_slug': bookSlug,
-        'chapter': chapterNumber,
-      },
+      arguments: {'book_slug': slug, 'chapter': chapterNumber},
     );
   }
 
   String _getBookSlug(String bookId) {
-    // Map book IDs to the appropriate slugs for asset paths
-    // For now, specifically handle John -> joao mapping as per requirements
-    switch (bookId) {
-      case 'john':
-        return 'joao';
-      case 'genesis':
-        return 'genesis';
-      case 'exodus':
-        return 'exodus';
-      case 'matthew':
-        return 'mateus';
-      case 'mark':
-        return 'marcos';
-      case 'luke':
-        return 'lucas';
-      // Add more mappings as needed when more assets are available
-      default:
-        return bookId; // Use the book ID as default if no specific mapping exists
-    }
+    return bookIdToSlug(bookId);
   }
 }
