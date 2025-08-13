@@ -191,8 +191,10 @@ class _BibleTextReaderState extends State<BibleTextReader> {
 
   Widget _buildDebugHUD() {
     final verseCount = (_loaderResult.state.data!['verses'] as List).length;
-    final source = FORCE_MOCK ? "MOCK" : "JSON local";
-    final targetPath = "/assets/bible/$_bookSlug/$_chapter.json";
+    final source =
+        identical(_loaderResult.state.data, MOCK_JOAO_1) ? "MOCK" : "JSON";
+    final targetPath =
+        "assets/bible/${_loaderResult.bookSlug}/${_loaderResult.chapter}.json";
 
     return Container(
       margin: EdgeInsets.all(4.w),
@@ -658,17 +660,23 @@ class ChapterLoaderResult {
   });
 }
 
-Future<String?> safeFetchMulti(String bookSlug, int chapter) async {
+Future<Map<String, dynamic>?> loadChapterJson(
+    String bookSlug, int chapter) async {
   final candidates = [
+    'assets/bible/$bookSlug/$chapter.json',
     '/assets/bible/$bookSlug/$chapter.json',
-    './assets/bible/$bookSlug/$chapter.json',
-    'assets/bible/$bookSlug/$chapter.json'
+    './assets/bible/$bookSlug/$chapter.json'
   ];
 
   for (final candidate in candidates) {
     try {
       final jsonString = await rootBundle.loadString(candidate);
-      if (jsonString.isNotEmpty) return jsonString;
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      if (json['verses'] != null &&
+          json['verses'] is List &&
+          (json['verses'] as List).isNotEmpty) {
+        return json;
+      }
     } catch (_) {}
   }
   return null;
@@ -691,19 +699,9 @@ ChapterLoaderResult useChapterLoader(String bookSlugParam, int chapterParam) {
     state.loading = true;
     state.error = false;
     state.data = null;
+    final json = await loadChapterJson(bookSlug, chapterNum);
 
-    final jsonString = await safeFetchMulti(bookSlug, chapterNum);
-    Map<String, dynamic>? json;
-    try {
-      json = jsonString != null ? jsonDecode(jsonString) : null;
-    } catch (_) {
-      json = null;
-    }
-
-    if (json != null &&
-        json['verses'] != null &&
-        json['verses'] is List &&
-        (json['verses'] as List).isNotEmpty) {
+    if (json != null) {
       state.data = json;
       state.loading = false;
       state.error = false;
