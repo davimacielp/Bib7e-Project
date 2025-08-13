@@ -51,7 +51,7 @@ const Map<String, dynamic> MOCK_JOAO_1 = {
   ]
 };
 
-const FORCE_MOCK = true;
+const FORCE_MOCK = false;
 const DEBUG_HUD = true;
 
 class BibleTextReader extends StatefulWidget {
@@ -69,7 +69,13 @@ class _BibleTextReaderState extends State<BibleTextReader> {
   @override
   void initState() {
     super.initState();
-    _loaderResult = useChapterLoader(_bookSlug, _chapter);
+    _loaderResult = useChapterLoader(
+      _bookSlug,
+      _chapter,
+      onStateChange: () {
+        setState(() {});
+      },
+    );
   }
 
   @override
@@ -85,7 +91,13 @@ class _BibleTextReaderState extends State<BibleTextReader> {
         setState(() {
           _bookSlug = newBookSlug;
           _chapter = newChapter;
-          _loaderResult = useChapterLoader(_bookSlug, _chapter);
+          _loaderResult = useChapterLoader(
+            _bookSlug,
+            _chapter,
+            onStateChange: () {
+              setState(() {});
+            },
+          );
         });
       }
     }
@@ -106,7 +118,13 @@ class _BibleTextReaderState extends State<BibleTextReader> {
 
   void _retry() {
     setState(() {
-      _loaderResult = useChapterLoader(_bookSlug, _chapter);
+      _loaderResult = useChapterLoader(
+        _bookSlug,
+        _chapter,
+        onStateChange: () {
+          setState(() {});
+        },
+      );
     });
   }
 
@@ -159,7 +177,7 @@ class _BibleTextReaderState extends State<BibleTextReader> {
       return _buildLoadingState();
     }
 
-    if (_loaderResult.state.error) {
+    if (_loaderResult.state.error && _loaderResult.state.data == null) {
       return _buildErrorState();
     }
 
@@ -422,89 +440,40 @@ class VerseCard extends StatelessWidget {
           SizedBox(height: 16),
 
           // Original line (blue)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                margin: EdgeInsets.only(top: 12, right: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  original,
-                  textDirection:
-                      rtl_original ? TextDirection.rtl : TextDirection.ltr,
-                  style: GoogleFonts.notoSerif(
-                    color: const Color(0xFF93C5FD),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            original,
+            textDirection: rtl_original ? TextDirection.rtl : TextDirection.ltr,
+            style: GoogleFonts.notoSerif(
+              color: const Color(0xFF93C5FD),
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
+            ),
           ),
           SizedBox(height: 24),
 
           // Transliteration line (violet, italic)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                margin: EdgeInsets.only(top: 12, right: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFA78BFA),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  translit,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w400,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            translit,
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
+            ),
           ),
           SizedBox(height: 24),
 
           // Portuguese line (amber)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                margin: EdgeInsets.only(top: 12, right: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFCD34D),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  pt,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFFFCD34D),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            pt,
+            style: GoogleFonts.inter(
+              color: const Color(0xFFFCD34D),
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -674,7 +643,8 @@ Future<String?> safeFetchMulti(String bookSlug, int chapter) async {
   return null;
 }
 
-ChapterLoaderResult useChapterLoader(String bookSlugParam, int chapterParam) {
+ChapterLoaderResult useChapterLoader(String bookSlugParam, int chapterParam,
+    {VoidCallback? onStateChange}) {
   final bookSlug = (bookSlugParam.isNotEmpty) ? bookSlugParam : "joao";
   final chapterNum = chapterParam > 0 ? chapterParam : 1;
 
@@ -685,6 +655,7 @@ ChapterLoaderResult useChapterLoader(String bookSlugParam, int chapterParam) {
       state.loading = false;
       state.error = false;
       state.data = MOCK_JOAO_1;
+      onStateChange?.call();
       return;
     }
 
@@ -707,6 +678,7 @@ ChapterLoaderResult useChapterLoader(String bookSlugParam, int chapterParam) {
       state.data = json;
       state.loading = false;
       state.error = false;
+      onStateChange?.call();
       return;
     }
 
@@ -714,12 +686,14 @@ ChapterLoaderResult useChapterLoader(String bookSlugParam, int chapterParam) {
       state.data = MOCK_JOAO_1;
       state.loading = false;
       state.error = false;
+      onStateChange?.call();
       return;
     }
 
     state.loading = false;
     state.error = true;
     state.data = null;
+    onStateChange?.call();
   }
 
   void retry() {

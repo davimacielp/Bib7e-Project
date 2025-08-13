@@ -1,13 +1,37 @@
 {
-    "book_slug": "joao",
-    "chapter": 1,
-    "rtl_original": false,
-    "verses": [
-        {
-            "n": 1,
-            "original": "Ἐν ἀρχῇ ἦν ὁ Λόγος, καὶ ὁ Λόγος ἦν πρὸς τὸν Θεόν, καὶ Θεὸς ἦν ὁ Λόγος.",
-            "translit": "En archē ēn ho Lógos, kai ho Lógos ēn pros ton Theón, kai Theós ēn ho Lógos.",
-            "pt": "No princípio era o Logos, e o Logos estava com Deus, e Deus era o Logos."
-        }
-    ]
+  "book_slug": "joao",
+  "chapter": 1,
+  "rtl_original": false,
+  "verses": [
+    {
+      "n": 1,
+      "original": "Ἐν ἀρχῇ ἦν ὁ Λόγος",
+      "translit": "En archē ēn ho Lógos",
+      "pt": "No princípio era o Logos"
+    },
+    {
+      "n": 2,
+      "original": "οὗτος ἦν ἐν ἀρχῇ πρὸς τὸν Θεόν",
+      "translit": "houtos ēn en archē pros ton Theón",
+      "pt": "Ele estava no princípio com Deus"
+    },
+    {
+      "n": 3,
+      "original": "πάντα δι' αὐτοῦ ἐγένετο",
+      "translit": "panta di' autou egeneto",
+      "pt": "Todas as coisas foram feitas por meio dele"
+    },
+    {
+      "n": 4,
+      "original": "ἐν αὐτῷ ζωὴ ἦν",
+      "translit": "en autō zōē ēn",
+      "pt": "Nele estava a vida"
+    },
+    {
+      "n": 5,
+      "original": "καὶ ἡ σκοτία αὐτὸ οὐ κατέλαβεν",
+      "translit": "kai hē skotia auto ou katelaben",
+      "pt": "e as trevas não a venceram"
+    }
+  ]
 }
